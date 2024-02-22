@@ -16,15 +16,15 @@ pub fn ml() -> Result<()> {
     let model_path = HSTRING::from("SqueezeNet.onnx");
     let img_path = HSTRING::from(r#"E:\WorkSpace\RustProjects\winml-rs\test.png"#);
     let device_name = "default";
-    let device_kind = LearningModelDeviceKind::Default;
+    let device_kind = LearningModelDeviceKind::DirectXHighPerformance;
+    let device = LearningModelDevice::Create(device_kind)?;
 
 
 
     // load the model
     println!("Loading model file {} on the {} device\n", model_path, device_name);
     let model = LearningModel::LoadFromFilePath(&model_path)?;
-    let session = LearningModelSession::CreateFromModelOnDevice(&model, &LearningModelDevice::Create(device_kind)?)?;
-    let binding = LearningModelBinding::CreateFromSession(&session)?;
+    let session = LearningModelSession::CreateFromModelOnDevice(&model, &device)?;
 
 
     let file = Storage::StorageFile::GetFileFromPathAsync(&img_path)?.get()?;
@@ -34,12 +34,6 @@ pub fn ml() -> Result<()> {
     let input_image = VideoFrame::CreateWithSoftwareBitmap(&software_bitmap)?;
 
 
-    binding.Bind(&HSTRING::from("data_0"), &ImageFeatureValue::CreateFromVideoFrame(&input_image)?)?;
-
-    let shape = vec![1i64, 1000, 1, 1];
-
-    binding.Bind(&HSTRING::from("softmaxout_1"), &TensorFloat::Create2(&Collections::IVectorView::<i64>::try_from(shape)?)?)?;
-    // binding.Bind(&HSTRING::from("softmaxout_1"), &TensorFloat::CreateFromShapeArrayAndDataArray(&[4, ][..], &[1f32, 1000f32, 1f32, 1f32][..])?)?;
 
 
     for _ in 0..1000 {
@@ -48,6 +42,16 @@ pub fn ml() -> Result<()> {
         let decoder = Imaging::BitmapDecoder::CreateAsync(&stream)?.get()?;
         let software_bitmap = decoder.GetSoftwareBitmapAsync()?.get()?;
         let input_image = VideoFrame::CreateWithSoftwareBitmap(&software_bitmap)?;
+
+        let binding = LearningModelBinding::CreateFromSession(&session)?;
+
+        binding.Bind(&HSTRING::from("data_0"), &ImageFeatureValue::CreateFromVideoFrame(&input_image)?)?;
+
+        let shape = vec![1i64, 1000, 1, 1];
+        binding.Bind(&HSTRING::from("softmaxout_1"), &TensorFloat::Create2(&Collections::IVectorView::<i64>::try_from(shape)?)?)?;
+        // binding.Bind(&HSTRING::from("softmaxout_1"), &TensorFloat::CreateFromShapeArrayAndDataArray(&[4, ][..], &[1f32, 1000f32, 1f32, 1f32][..])?)?;
+
+
 
         let result = session.Evaluate(&binding, &HSTRING::from("run_id"))?;
         let res_tensor: TensorFloat = result.Outputs()?.Lookup(&HSTRING::from("softmaxout_1"))?.cast()?;
