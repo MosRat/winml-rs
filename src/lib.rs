@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use windows::{AI::MachineLearning::*,
               Foundation::Collections,
               Graphics::Imaging,
@@ -10,6 +12,8 @@ use windows::core::*;
 use std::thread::sleep;
 use std::time::Duration;
 
+pub mod onnx;
+
 pub fn ml() -> Result<()> {
     let start = std::time::Instant::now();
 
@@ -20,20 +24,16 @@ pub fn ml() -> Result<()> {
     let device = LearningModelDevice::Create(device_kind)?;
 
 
-
     // load the model
     println!("Loading model file {} on the {} device\n", model_path, device_name);
     let model = LearningModel::LoadFromFilePath(&model_path)?;
     let session = LearningModelSession::CreateFromModelOnDevice(&model, &device)?;
 
 
-    let file = Storage::StorageFile::GetFileFromPathAsync(&img_path)?.get()?;
-    let stream = file.OpenAsync(Storage::FileAccessMode::Read)?.get()?;
-    let decoder = Imaging::BitmapDecoder::CreateAsync(&stream)?.get()?;
-    let software_bitmap = decoder.GetSoftwareBitmapAsync()?.get()?;
-    let input_image = VideoFrame::CreateWithSoftwareBitmap(&software_bitmap)?;
-
-
+    // let file = Storage::StorageFile::GetFileFromPathAsync(&img_path)?.get()?;
+    // let stream = file.OpenAsync(Storage::FileAccessMode::Read)?.get()?;
+    // let decoder = Imaging::BitmapDecoder::CreateAsync(&stream)?.get()?;
+    // let software_bitmap = decoder.GetSoftwareBitmapAsync()?.get()?;
 
 
     for _ in 0..1000 {
@@ -52,16 +52,14 @@ pub fn ml() -> Result<()> {
         // binding.Bind(&HSTRING::from("softmaxout_1"), &TensorFloat::CreateFromShapeArrayAndDataArray(&[4, ][..], &[1f32, 1000f32, 1f32, 1f32][..])?)?;
 
 
-
         let result = session.Evaluate(&binding, &HSTRING::from("run_id"))?;
         let res_tensor: TensorFloat = result.Outputs()?.Lookup(&HSTRING::from("softmaxout_1"))?.cast()?;
-        let mut res_vec: Vec<_> = res_tensor
+        let res_vec: Vec<_> = res_tensor
             .GetAsVectorView()?
             .into_iter()
             .collect();
         let max = res_vec.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap()).unwrap();
         println!("res:{} {}", max.0, max.1);
-
     }
 
 
@@ -82,7 +80,7 @@ pub fn ocr() -> Result<()> {
 
     for _ in 0..100 {
         let file1 = Storage::StorageFile::GetFileFromPathAsync(&img_path)?;
-        let file=file1.get()?;
+        let file = file1.get()?;
 
         let stream = file.OpenAsync(Storage::FileAccessMode::Read)?.get()?;
         let decoder = Imaging::BitmapDecoder::CreateAsync(&stream)?.get()?;
@@ -92,7 +90,7 @@ pub fn ocr() -> Result<()> {
 
         let lines = result.Lines()?;
 
-        println!("{:?}",lines.Size());
+        println!("{:?}", lines.Size());
         for line in lines {
             println!("{}", line.Text().unwrap());
         }
